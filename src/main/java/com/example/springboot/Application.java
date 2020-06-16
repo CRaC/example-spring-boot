@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
+import org.crac.*;
 
 @SpringBootApplication
 public class Application {
@@ -18,6 +19,15 @@ public class Application {
 		Arrays.sort(beanNames);
 		for (String beanName : beanNames) {
 			System.out.println(beanName);
+		}
+
+		try {
+			Core.checkpointRestore();
+		} catch (CheckpointException | RestoreException e) {
+			for (Throwable t : e.getSuppressed()) {
+				t.printStackTrace();
+			}
+			System.exit(1);
 		}
 	}
 	
