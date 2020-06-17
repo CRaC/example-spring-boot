@@ -37,5 +37,9 @@ jobs:
         #sleep 10 # allow checkpoint to settle
         #[ 137 = $(< exitcode) ]
     - run: timeout 30 jdk/bin/java -Zcheckpoint:cr -jar target/spring-boot-0.0.1-SNAPSHOT.jar || [ $? = 137 ]
-    - run: timeout 10 jdk/bin/java -Zrestore:cr || [ $? = 124 ]
+    - run: |
+        jdk/bin/java -Zrestore:cr &
+        sleep 3
+        curl localhost:8080 | grep "Greetings from Spring Boot!"
+        pkill -f spring-boot-0.0.1-SNAPSHOT.jar
 
