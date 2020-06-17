@@ -27,6 +27,13 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PACKAGES }}
 
+    - name: Test on Vanila JDK
+      run: |
+        java -showversion -jar target/spring-boot-0.0.1-SNAPSHOT.jar &
+        sleep 10
+        curl localhost:8080 | grep "Greetings from Spring Boot!"
+        pkill -f target/spring-boot-0.0.1-SNAPSHOT.jar
+
     - name: Download JDK
       run: |
         id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/release-crac | jq '.assets[] | select(.name == "jdk.tar.gz").id')
@@ -47,4 +54,3 @@ jobs:
         jdk/bin/java -Zrestore:cr &
         sleep 3
         curl localhost:8080 | grep "Greetings from Spring Boot!"
-
