@@ -47,5 +47,4 @@ jobs:
         jdk/bin/java -Zrestore:cr &
         sleep 3
         curl localhost:8080 | grep "Greetings from Spring Boot!"
-        pkill -f spring-boot-0.0.1-SNAPSHOT.jar
 
