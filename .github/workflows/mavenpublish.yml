@@ -48,7 +48,7 @@ jobs:
           -s "Started Application" \
           java -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
-        util/bench.sh http://localhost:8080
+        utils/bench.sh http://localhost:8080
         kill $P
 
     - name: Download JDK
@@ -88,7 +88,7 @@ jobs:
           -s "restore-finish" \
           jdk/bin/java -Zrestore:cr)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
-        util/bench.sh http://localhost:8080
+        utils/bench.sh http://localhost:8080
         kill $P
     - run:
         timeout 3 bash -c "jdk/lib/javatime ; jdk/bin/java -Zrestore:cr"
