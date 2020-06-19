@@ -73,7 +73,7 @@ jobs:
         # warmup the service
         siege -b -c 1 -r 100000 http://localhost:8080 > /dev/null
         jcmd $P JDK.checkpoint
-        [ 137 = $(tail -f exitcode | head -n 1) ]
+        [ 137 = $(utils/read-exitcode.sh exitcode) ]
 
     - name: Test on C/RaC
       run: |
