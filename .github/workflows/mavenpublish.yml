@@ -11,7 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+    - name: Install prerequisites
+      run: DEBIAN_FRONTEND=noninteractive
+        apt-get -y --no-install-recommends install
+          siege
+
     - uses: actions/checkout@v2
+
+    - name: Checkout utils
+      uses: actions/checkout@v2
+      with:
+        repository: org-crac/utils
+        token: ${{ secrets.PACKAGES }}
+        path: utils
+
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
       with:
@@ -29,28 +42,51 @@ jobs:
 
     - name: Test on Vanila JDK
       run: |
-        java -showversion -jar target/spring-boot-0.0.1-SNAPSHOT.jar &
-        sleep 10
+        P=$(utils/start-bg.sh
+          -s "Started Application" \
+          java -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
-        pkill -f target/spring-boot-0.0.1-SNAPSHOT.jar
+        util/bench.sh http://localhost:8080
+        kill $P
 
     - name: Download JDK
       run: |
-        id=$(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/tags/release-crac | jq '.assets[] | select(.name == "jdk.tar.gz").id')
-        curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/org-crac/jdk/releases/assets/$id -LJOH 'Accept: application/octet-stream'
+        utils/download-jdk.sh
         sudo tar -axf jdk.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.PACKAGES }}
 
-    #- run: |
-        #( jdk/bin/java -Zcheckpoint:cr -jar target/spring-boot-0.0.1-SNAPSHOT.jar  || echo $? > exitcode) &
-        #sleep 10 # allow service to start
-        #curl localhost:8080 # "warmup" the service
-        #jcmd target/spring-boot-0.0.1-SNAPSHOT.jar JDK.checkpoint
-        #sleep 10 # allow checkpoint to settle
-        #[ 137 = $(< exitcode) ]
-    - run: timeout 30 jdk/bin/java -Zcheckpoint:cr -jar target/spring-boot-0.0.1-SNAPSHOT.jar || [ $? = 137 ]
     - run: |
-        jdk/bin/java -Zrestore:cr &
-        sleep 3
+        P=$(utils/start-bg.sh
+        -s "Started Application" \
+        -e exitcode \
+          $JDK/bin/java \
+          -Zcheckpoint:cr \
+          -XX:+UnlockDiagnosticVMOptions \
+          -XX:+CRTraceStartupTime \
+          -Djdk.crac.trace-startup-time=true \
+          -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
+
+        # warmup the service
+        siege -b -c 1 -r 100000 localhost:8080
+        jcmd $P JDK.checkpoint
+        [ 137 = $(tail -f exitcode | head -n 1) ]
+
+    #- run:
+        #timeout 30
+        #jdk/bin/java
+          #-Zcheckpoint:cr
+          #-XX:+UnlockDiagnosticVMOptions
+          #-XX:+CRTraceStartupTime
+          #-Djdk.crac.trace-startup-time=true
+          #-jar target/spring-boot-0.0.1-SNAPSHOT.jar
+        #|| [ $? = 137 ]
+    - run: |
+        P=$(utils/start-bg.sh -s "restore-finish" \
+          jdk/bin/java -Zrestore:cr)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
+        util/bench.sh http://localhost:8080
+        kill $P
+    - run:
+        timeout 3 bash -c "jdk/lib/javatime ; jdk/bin/java -Zrestore:cr"
+        | utils/sel.awk -v from=prestart -v to=restore-finish
