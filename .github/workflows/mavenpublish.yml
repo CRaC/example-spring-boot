@@ -12,7 +12,9 @@ jobs:
     timeout-minutes: 5
     steps:
     - name: Install prerequisites
-      run: DEBIAN_FRONTEND=noninteractive
+      run:
+        sudo
+        DEBIAN_FRONTEND=noninteractive
         apt-get -y --no-install-recommends install
           siege
 
