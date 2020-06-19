@@ -44,7 +44,7 @@ jobs:
 
     - name: Test on Vanila JDK
       run: |
-        P=$(utils/start-bg.sh
+        P=$(utils/start-bg.sh \
           -s "Started Application" \
           java -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
@@ -59,7 +59,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.PACKAGES }}
 
     - run: |
-        P=$(utils/start-bg.sh
+        P=$(utils/start-bg.sh \
         -s "Started Application" \
         -e exitcode \
           $JDK/bin/java \
@@ -84,7 +84,8 @@ jobs:
           #-jar target/spring-boot-0.0.1-SNAPSHOT.jar
         #|| [ $? = 137 ]
     - run: |
-        P=$(utils/start-bg.sh -s "restore-finish" \
+        P=$(utils/start-bg.sh \
+          -s "restore-finish" \
           jdk/bin/java -Zrestore:cr)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
         util/bench.sh http://localhost:8080
