@@ -68,7 +68,7 @@ jobs:
           -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
 
         # warmup the service
-        siege -b -c 1 -r 100000 http://localhost:8080 > /dev/null
+        utils/bench.sh http://localhost:8080
         jcmd $P JDK.checkpoint
         [ 137 = $(utils/read-exitcode.sh exitcode) ]
 
