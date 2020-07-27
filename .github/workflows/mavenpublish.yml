@@ -53,14 +53,14 @@ jobs:
     - name: Download JDK
       run: |
         utils/download-jdk.sh
-        sudo tar -axf jdk.tar.gz
+        sudo tar -axf jdk14-crac.tar.gz
 
     - name: Prepare warm checkpoint
       run: |
         P=$(utils/start-bg.sh \
         -s "Started Application" \
         -e exitcode \
-          jdk/bin/java \
+          jdk14-crac/bin/java \
           -Zcheckpoint:cr \
           -XX:+UnlockDiagnosticVMOptions \
           -XX:+CRTraceStartupTime \
@@ -76,12 +76,12 @@ jobs:
       run: |
         P=$(utils/start-bg.sh \
           -s "restore-finish" \
-          jdk/bin/java -Zrestore:cr)
+          jdk14-crac/bin/java -Zrestore:cr)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
         utils/bench.sh http://localhost:8080
         kill $P
 
     - name: Test C/RaC startup time
       run:
-        timeout 3 bash -c "jdk/lib/javatime ; jdk/bin/java -Zrestore:cr"
+        timeout 3 bash -c "jdk14-crac/lib/javatime ; jdk14-crac/bin/java -Zrestore:cr"
         | utils/sel.awk -v from=prestart -v to=restore-finish
