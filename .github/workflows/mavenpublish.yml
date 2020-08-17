@@ -61,7 +61,7 @@ jobs:
         -s "Started Application" \
         -e exitcode \
           jdk14-crac/bin/java \
-          -Zcheckpoint:cr \
+          -XX:CRaCCheckpointTo=cr \
           -XX:+UnlockDiagnosticVMOptions \
           -XX:+CRTraceStartupTime \
           -Djdk.crac.trace-startup-time=true \
@@ -76,12 +76,12 @@ jobs:
       run: |
         P=$(utils/start-bg.sh \
           -s "restore-finish" \
-          jdk14-crac/bin/java -Zrestore:cr)
+          jdk14-crac/bin/java -XX:CRaCRestoreFrom=cr)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
         utils/bench.sh http://localhost:8080
         kill $P
 
     - name: Test C/RaC startup time
       run:
-        timeout 3 bash -c "jdk14-crac/lib/javatime ; jdk14-crac/bin/java -Zrestore:cr"
+        timeout 3 bash -c "jdk14-crac/lib/javatime ; jdk14-crac/bin/java -XX:CRaCRestoreFrom=cr"
         | utils/sel.awk -v from=prestart -v to=restore-finish

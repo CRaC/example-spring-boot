@@ -20,7 +20,7 @@ Please refer to [README](https://github.com/org-crac/docs#users-flow) for detail
 ### Preparing the image
 1. Run the [JDK](README.md#JDK) in the checkpoint mode
 ```
-$JAVA_HOME/bin/java -Zcheckpoint:cr -jar target/spring-boot-0.0.1-SNAPSHOT.jar
+$JAVA_HOME/bin/java -XX:CRaCCheckpointTo=cr -jar target/spring-boot-0.0.1-SNAPSHOT.jar
 ```
 2. Warm-up the instance
 ```
@@ -34,5 +34,5 @@ jcmd target/spring-boot-0.0.1-SNAPSHOT.jar JDK.checkpoint
 ### Restoring
 
 ```
-$JAVA_HOME/bin/java -Zrestore:cr
+$JAVA_HOME/bin/java -XX:CRaCRestoreFrom=cr
 ```
