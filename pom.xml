@@ -17,11 +17,11 @@
 	<repositories>
 		<repository>
 			<id>github</id>
-			<url>https://maven.pkg.github.com/org-crac/tomcat</url>
+			<url>https://maven.pkg.github.com/crac/tomcat</url>
 		</repository>
 		<repository>
 			<id>github2</id>
-			<url>https://maven.pkg.github.com/org-crac/org.crac</url>
+			<url>https://maven.pkg.github.com/crac/org.crac</url>
 		</repository>
 	</repositories>
 

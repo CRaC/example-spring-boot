@@ -23,7 +23,7 @@ jobs:
     - name: Checkout utils
       uses: actions/checkout@v2
       with:
-        repository: org-crac/utils
+        repository: CRaC/utils
         path: utils
 
     - name: Set up JDK 1.8
