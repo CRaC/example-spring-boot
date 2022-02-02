@@ -14,27 +14,26 @@
 	<name>spring-boot</name>
 	<description>Demo project for Spring Boot</description>
 
-	<repositories>
-		<repository>
-			<id>github</id>
-			<url>https://maven.pkg.github.com/crac/tomcat</url>
-		</repository>
-		<repository>
-			<id>github2</id>
-			<url>https://maven.pkg.github.com/crac/org.crac</url>
-		</repository>
-	</repositories>
-
-
 	<properties>
 		<java.version>1.8</java.version>
-		<tomcat.version>999-SNAPSHOT</tomcat.version>
+		<tomcat.version>8.5.75</tomcat.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
+			<groupId>io.github.crac.org.apache.tomcat.embed</groupId>
+			<artifactId>tomcat-embed-core</artifactId>
+			<version>8.5.75</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.tomcat.embed</groupId>
+					<artifactId>tomcat-embed-core</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
@@ -45,6 +44,10 @@
 				<exclusion>
 					<groupId>org.junit.vintage</groupId>
 					<artifactId>junit-vintage-engine</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.tomcat</groupId>
+					<artifactId>tomcat-embed-core</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
