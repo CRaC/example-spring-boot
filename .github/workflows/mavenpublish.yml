@@ -3,6 +3,7 @@ name: Maven Package
 
 on:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,7 +17,7 @@ jobs:
         apt-get -y --no-install-recommends install
           siege
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Checkout utils
       uses: actions/checkout@v2
@@ -26,11 +27,12 @@ jobs:
 
     - run: make -C utils
 
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v1
+    - name: Set up JDK 17
+      uses: actions/setup-java@v2
       with:
-        java-version: 1.8
-    - uses: actions/cache@v2
+        java-version: 17
+        distribution: 'zulu'
+    - uses: actions/cache@v3
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -43,7 +45,7 @@ jobs:
       run: |
         P=$(utils/start-bg.sh \
           -s "Started Application" \
-          java -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
+          java -jar target/spring-boot-initial-0.0.1-SNAPSHOT.jar)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
         utils/bench.sh http://localhost:8080
         kill $P
@@ -65,7 +67,7 @@ jobs:
           -XX:+CRTraceStartupTime \
           -Djdk.crac.trace-startup-time=true \
           --add-opens java.base/java.lang=ALL-UNNAMED \
-          -jar target/spring-boot-0.0.1-SNAPSHOT.jar)
+          -jar target/spring-boot-initial-0.0.1-SNAPSHOT.jar)
 
         # warmup the service
         utils/bench.sh http://localhost:8080
@@ -83,5 +85,5 @@ jobs:
 
     - name: Test C/RaC startup time
       run:
-        timeout 3 bash -c "utils/lib/javatime ; ${{ env.JDK }}/bin/java -XX:CRaCRestoreFrom=cr"
+        timeout 3 bash -c "utils/javatime ; ${{ env.JDK }}/bin/java -XX:CRaCRestoreFrom=cr"
         | utils/sel.awk -v from=prestart -v to=restore-finish
