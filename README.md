@@ -13,6 +13,12 @@ Use Maven to build
 
 Please refer to [README](https://github.com/CRaC/docs#users-flow) for details.
 
+If you see an error, you may have to update your `criu` permissions with
+```
+sudo chown root:root $JAVA_HOME/lib/criu
+sudo chmod u+s $JAVA_HOME/lib/criu
+```
+
 ### Preparing the image
 1. Run the [JDK](README.md#JDK) in the checkpoint mode
 ```
