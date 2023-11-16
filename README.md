@@ -1,14 +1,12 @@
 # example-spring-boot
 
-This is an example of Spring Boot [Getting Started](https://github.com/spring-guides/gs-spring-boot/tree/c42d4edfec8e704431380b884f5cfed78f17e876/initial) modified to work on OpenJDK CRaC.
-
-Changes: https://github.com/CRaC/example-spring-boot/compare/base..crac
+This is an example of Spring Boot [Getting Started](https://github.com/spring-guides/gs-spring-boot/tree/main/initial) modified to work on OpenJDK CRaC, which consists only in using Spring Boot 3.2+ and adding the `org.crac:crac` dependency (version `1.4.0` or later).
 
 ## Building
 
-Use maven to build
+Use Maven to build
 ```
-mvn package
+./mvnw package
 ```
 
 ## Running
