@@ -39,20 +39,22 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    - run: mvn -B package
+    - run: ./mvnw -B package
 
     - name: Test on Vanila JDK
       run: |
         P=$(utils/start-bg.sh \
           -s "Started Application" \
-          java -jar target/spring-boot-initial-0.0.1-SNAPSHOT.jar)
+          java -jar target/example-spring-boot-0.0.1-SNAPSHOT.jar)
         curl localhost:8080 | grep "Greetings from Spring Boot!"
         utils/bench.sh http://localhost:8080
         kill $P
 
     - name: Download JDK
       run: |
-        archive=$(utils/download-jdk.sh)
+        url=https://cdn.azul.com/zulu/bin/zulu17.44.17-ca-crac-jdk17.0.8-linux_x64.tar.gz
+        archive=${url##*/}
+        curl -LO $url
         sudo tar -axf $archive
         echo JDK=${archive%%.tar.gz} >> $GITHUB_ENV
 
@@ -67,7 +69,7 @@ jobs:
           -XX:+CRTraceStartupTime \
           -Djdk.crac.trace-startup-time=true \
           --add-opens java.base/java.lang=ALL-UNNAMED \
-          -jar target/spring-boot-initial-0.0.1-SNAPSHOT.jar)
+          -jar target/example-spring-boot-0.0.1-SNAPSHOT.jar)
 
         # warmup the service
         utils/bench.sh http://localhost:8080
