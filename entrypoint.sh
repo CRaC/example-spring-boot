@@ -2,7 +2,7 @@
 mkdir -p $CHECKPOINT_RESTORE_FILES_DIR
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS} -XX:+ExitOnOutOfMemoryError"
 
-if [ ! -f "$CHECKPOINT_RESTORE_FILES_DIR/files.img" ]; then
+if [ -z "$(ls $CHECKPOINT_RESTORE_FILES_DIR/core-*.img 2>/dev/null)" ]; then
   echo "Save checkpoint to $CHECKPOINT_RESTORE_FILES_DIR" 1>&2
   java -XX:CRaCCheckpointTo=$CHECKPOINT_RESTORE_FILES_DIR org.springframework.boot.loader.launch.JarLauncher &
   sleep ${SLEEP_BEFORE_CHECKPOINT:-10}
