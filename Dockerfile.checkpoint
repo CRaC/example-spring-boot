@@ -1,0 +1,23 @@
+ARG JDK_NAME=zulu22.30.13-ca-crac-jdk22.0.1-linux_x64
+
+FROM ubuntu:24.04 as builder
+ARG JDK_NAME
+
+RUN apt-get update && apt-get install -y wget
+RUN wget -O crac-jdk.tar.gz https://cdn.azul.com/zulu/bin/$JDK_NAME.tar.gz
+RUN tar zxf ./crac-jdk.tar.gz -C /usr/share
+
+# End of builder
+
+FROM ubuntu:24.04
+ARG JDK_NAME
+ARG FAT_JAR=
+
+ENV JDK_NAME=$JDK_NAME
+ENV JAVA_HOME=/usr/share/$JDK_NAME
+
+COPY --from=builder /usr/share/${JDK_NAME} /usr/share/${JDK_NAME}
+RUN ln -s $JAVA_HOME/bin/java /bin/ && ln -s $JAVA_HOME/bin/jcmd /bin/
+ADD target/example-spring-boot*.jar  /example-spring-boot.jar
+ENTRYPOINT [ "java", "-XX:CPUFeatures=generic", "-XX:CRaCCheckpointTo=/cr", "-jar", "/example-spring-boot.jar" ]
+

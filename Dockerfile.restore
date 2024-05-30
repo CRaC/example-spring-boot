@@ -1,0 +1,5 @@
+FROM example-spring-boot-checkpoint
+ADD target/cr /cr
+ENTRYPOINT [ "java", "-XX:CRaCRestoreFrom=/cr" ]
+
+
