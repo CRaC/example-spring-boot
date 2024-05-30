@@ -48,7 +48,7 @@ docker build -f Dockerfile.checkpoint -t example-spring-boot-checkpoint .
 
 2.  Start a (detached) container that will be checkpointed. Note that we're mounting `target/cr` into the container.
 ```
-docker run -d --rm -v $(pwd)/target/cr:/cr --privileged -p 8080:8080 --name example-spring-boot-checkpoint example-spring-boot-checkpoint
+docker run -d --rm -v $(pwd)/target/cr:/cr --cap-add=CHECKPOINT_RESTORE --cap-add=SYS_PTRACE -p 8080:8080 --name example-spring-boot-checkpoint example-spring-boot-checkpoint
 ```
 
 3. Validate that the container is up and running (here you could also perform any warm-up)
