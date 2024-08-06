@@ -1,6 +1,7 @@
-ARG JDK_NAME=zulu22.30.13-ca-crac-jdk22.0.1-linux_x64
+ARG BASE_IMAGE=ubuntu:24.04
+ARG JDK_NAME=zulu22.32.17-ca-crac-jdk22.0.2-linux_x64
 
-FROM ubuntu:24.04 as builder
+FROM $BASE_IMAGE AS builder
 ARG JDK_NAME
 
 RUN apt-get update && apt-get install -y wget
@@ -9,7 +10,7 @@ RUN tar zxf ./crac-jdk.tar.gz -C /usr/share
 
 # End of builder
 
-FROM ubuntu:24.04
+FROM $BASE_IMAGE
 ARG JDK_NAME
 ARG FAT_JAR=
 
