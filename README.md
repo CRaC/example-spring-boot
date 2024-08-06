@@ -76,7 +76,7 @@ curl localhost:8080
 
 ## Checkpoint as Dockerfile build step
 
-In order to perform a checkpoint in a container we need those extra capabilites mentioned in the commands above. Regular `docker build ...` does not include these and therefore it is not possible to do the checkpoint as a build step - unless we create a docker buildx builder that will include these. Note that you require a recent version of Docker BuildKit to do so.
+In order to perform a checkpoint in a container we need those extra capabilites mentioned in the commands above. Regular `docker build ...` does not include these and therefore it is not possible to do the checkpoint as a build step - unless we create a docker buildx builder that will include these. See [Dockerfile reference](https://docs.docker.com/reference/dockerfile/#run---security) for more details. Note that you require a recent version of Docker BuildKit to do so.
 
 ```
 docker buildx create --buildkitd-flags '--allow-insecure-entitlement security.insecure' --name privileged-builder
