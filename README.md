@@ -73,3 +73,20 @@ docker run -it --rm -p 8080:8080 example-spring-boot
 # In another terminal
 curl localhost:8080
 ```
+
+## Checkpoint as Dockerfile build step
+
+In order to perform a checkpoint in a container we need those extra capabilites mentioned in the commands above. Regular `docker build ...` does not include these and therefore it is not possible to do the checkpoint as a build step - unless we create a docker buildx builder that will include these. Note that you require a recent version of Docker BuildKit to do so.
+
+```
+docker buildx create --buildkitd-flags '--allow-insecure-entitlement security.insecure' --name privileged-builder
+docker buildx build --load --builder privileged-builder --allow=security.insecure -f Dockerfile.privileged -t example-spring-boot .
+```
+
+Now you can start the example as before with
+```
+docker run -it --rm -p 8080:8080 example-spring-boot
+```
+
+The most important part of the Dockerfile is invoking the checkpoint with `RUN --security=insecure`. Also, when creating your own Dockerfiles don't forget to enable the experimental syntax using `# syntax=docker/dockerfile:1.3-labs`.
+
