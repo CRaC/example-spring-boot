@@ -90,3 +90,48 @@ docker run -it --rm -p 8080:8080 example-spring-boot
 
 The most important part of the Dockerfile is invoking the checkpoint with `RUN --security=insecure`. Also, when creating your own Dockerfiles don't forget to enable the experimental syntax using `# syntax=docker/dockerfile:1.3-labs`.
 
+## Building and running in Google Cloud
+
+It is possible to build the image in Google Cloud Build and later create a service in Google Cloud Run, with a minor modification of the steps above. Start with logging in and creating a repository for the images:
+
+```sh
+gcloud auth login
+export PROJECT_ID=$(gcloud config list --format 'value(core.project)')
+# Setup default region
+gcloud config set artifacts/location us-west1
+gcloud config set run/region us-west1
+gcloud artifacts repositories create crac-examples --repository-format=docker
+```
+
+You might need to use service accounts to perform the builds and deploy service; create these through IAM & Admin console and add necessary roles:
+* cloud-build: 'Cloud Build Service Account', 'Cloud Build WorkerPool User', 'Service Account User'
+* cloud-run: 'Cloud Run Admin', 'Service Account User'
+
+We present two ways to perform the build: `cloudbuild-builder.yaml` uses the single Dockerfile steps shown above, performing the checkpoint in a BuildKit builder. You can also apply the steps from 'Preparing a container image' directly, with several modifications as used in `cloudbuild-direct.yaml`. The main difference vs. local build is that in Cloud Build the commands are executed from a container that provides access to the Docker server where it runs: volume mounts and port mapping works differently. Here is a list of differences:
+
+* For checkpoint image we don't mount `target/cr` directly, but use a named volume `cr`. After checkpoint we need to copy the image out to pass it to restoring image Docker build.
+* Ports are not bound to localhost; checkpoint container must use network `cloudbuild` and we connect to the container using its name as hostname.
+* We use `--privileged` rather than fine-grained list of capabilities; Docker version used in Cloud Build does not allow capability `CHECKPOINT_RESTORE`.
+
+You can submit the build(s) using these commands:
+```sh
+gcloud builds submit --config cloudbuild-builder.yaml --service-account=projects/$PROJECT_ID/serviceAccounts/cloud-builder@$PROJECT_ID.iam.gserviceaccount.com
+gcloud builds submit --config cloudbuild-direct.yaml --service-account=projects/$PROJECT_ID/serviceAccounts/cloud-builder@$PROJECT_ID.iam.gserviceaccount.com
+```
+
+When the build completes, you can create the service in Cloud Run:
+
+```sh
+gcloud run deploy example-spring-boot-direct  \
+    --image=us-west1-docker.pkg.dev/$PROJECT_ID/crac-examples/example-spring-boot-direct  \
+    --execution-environment=gen2 --allow-unauthenticated \
+    --service-account=cloud-runner@$PROJECT_ID.iam.gserviceaccount.com
+```
+
+Note that we're using Second generation Execution environment; our testing shows that it is not possible to restore in First generation. Now you can test your deployment:
+
+```sh
+export URL=$(gcloud run services describe example-spring-boot-direct --format 'value(status.address.url)')
+curl $URL
+Greetings from Spring Boot!
+```

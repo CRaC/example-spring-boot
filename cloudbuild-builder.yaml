@@ -1,0 +1,10 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  script: |
+    docker buildx create --buildkitd-flags '--allow-insecure-entitlement security.insecure' --name privileged-builder
+    docker buildx build --load --builder privileged-builder --allow=security.insecure -f Dockerfile.privileged -t us-west1-docker.pkg.dev/$PROJECT_ID/crac-examples/example-spring-boot-builder .
+  automapSubstitutions: true
+images:
+- us-west1-docker.pkg.dev/$PROJECT_ID/crac-examples/example-spring-boot-builder
+options:
+  logging: CLOUD_LOGGING_ONLY

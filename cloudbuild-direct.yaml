@@ -1,0 +1,29 @@
+steps:
+- name: maven:3.8.7-openjdk-18
+  entrypoint: mvn
+  args: [ "-B", "install" ]
+- name: 'gcr.io/cloud-builders/docker'
+  env:
+  - CHECKPOINT_IMG=example-spring-boot-checkpoint
+  - CONTAINER=example-spring-boot-checkpoint
+  script: |
+    apt-get update && apt-get install siege
+    docker build -f Dockerfile.checkpoint -t $CHECKPOINT_IMG .
+    docker run -d --rm -v cr:/cr --privileged --network cloudbuild -p 8080:8080 --name $CONTAINER $CHECKPOINT_IMG
+    # Wait until the application is up and serving requests
+    until curl --output /dev/null --silent --head --fail http://$CONTAINER:8080; do
+      sleep 0.1
+    done
+    # Warm-up the server by executing 100k requests against it
+    siege -c 1 -r 100000 -b http://$CONTAINER:8080
+    docker exec $CONTAINER jcmd example-spring-boot JDK.checkpoint
+    # Wait until the container finishes writing the image to volume 'cr'
+    docker container wait $CONTAINER
+    # Copy contents of the 'cr' volume into target/cr
+    docker run --rm -v cr:/cr --entrypoint tar $CHECKPOINT_IMG -cf - /cr | tar -C target -xvf -
+    docker build -f Dockerfile.restore -t us-west1-docker.pkg.dev/$PROJECT_ID/crac-examples/example-spring-boot-direct .
+  automapSubstitutions: true
+images:
+- us-west1-docker.pkg.dev/$PROJECT_ID/crac-examples/example-spring-boot-direct
+options:
+  logging: CLOUD_LOGGING_ONLY
