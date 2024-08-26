@@ -1,0 +1,57 @@
+# syntax=docker/dockerfile:1.3-labs
+
+###
+# This Dockerfile requires priviledged builder and as such cannot be run usin
+# regular `docker build ...`. You need to first create a buildx builder and
+# then use it to perform the build:
+#
+#   docker buildx create --buildkitd-flags '--allow-insecure-entitlement security.insecure' --name privileged-builder
+#   docker buildx build --load --builder privileged-builder --allow=security.insecure -f Dockerfile.privileged -t example-spring-boot .
+#
+###
+
+ARG BASE_IMAGE=ubuntu:24.04
+ARG JDK_NAME=zulu22.32.17-ca-crac-jdk22.0.2-linux_x64
+
+FROM $BASE_IMAGE AS builder
+ARG JDK_NAME
+ENV JAVA_HOME=/usr/share/$JDK_NAME
+ENV ENDPOINT=http://localhost:8080
+
+RUN apt-get update && apt-get install -y curl maven siege wget
+RUN wget -O crac-jdk.tar.gz https://cdn.azul.com/zulu/bin/$JDK_NAME.tar.gz
+RUN tar zxf ./crac-jdk.tar.gz -C /usr/share
+
+ADD . /example-spring-boot
+RUN cd /example-spring-boot && mvn -B install && mv target/example-spring-boot-0.0.1-SNAPSHOT.jar /example-spring-boot.jar
+
+RUN --security=insecure <<END_OF_SCRIPT
+#!/bin/bash
+
+# Start the process in background. We are adding -XX:CRaCMinPid to explicitly
+# offset PIDs (needed for unprivileged restore) as the process started from
+# this script won't be running as PID 1, disabling the built-in offsetting.
+$JAVA_HOME/bin/java -XX:CPUFeatures=generic -XX:CRaCMinPid=128 -XX:CRaCCheckpointTo=/cr -jar /example-spring-boot.jar &
+PID=$!
+# Wait until the connection is opened
+until curl --output /dev/null --silent --head --fail $ENDPOINT; do
+    sleep 0.1
+done
+# Warm-up the server by executing 100k requests against it
+siege -c 1 -r 100000 -b $ENDPOINT
+# Do the checkpoint
+$JAVA_HOME/bin/jcmd /example-spring-boot.jar JDK.checkpoint
+# Wait until the process completes, returning success (wait would return exit code 137)
+wait $PID || true
+
+END_OF_SCRIPT
+
+FROM $BASE_IMAGE
+ARG JDK_NAME
+ENV JAVA_HOME=/usr/share/$JDK_NAME
+ENV PATH="$PATH:$JAVA_HOME/bin"
+
+COPY --from=builder /usr/share/${JDK_NAME} /usr/share/${JDK_NAME}
+COPY --from=builder /cr /cr
+COPY --from=builder /example-spring-boot.jar /example-spring-boot.jar
+CMD [ "java", "-XX:CRaCRestoreFrom=/cr" ]
