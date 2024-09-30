@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: crac-image
+  namespace: example
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+  storageClassName: "standard"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-checkpoint
+  namespace: example
+spec:
+  template:
+    spec:
+      containers:
+      - name: workload
+        image: example-spring-boot-k8s
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CRAC_FILES_DIR
+          value: /var/crac/image
+        args:
+        - /checkpoint.sh
+        securityContext:
+          capabilities:
+            add:
+            - CHECKPOINT_RESTORE
+            - SYS_PTRACE
+        volumeMounts:
+        - mountPath: /var/crac
+          name: crac-image
+      - name: warmup
+        image: jstarcher/siege
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          while ! nc -z localhost 8080; do sleep 0.1; done
+          siege -c 1 -r 100000 -b http://localhost:8080
+          echo "Do checkpoint, please" | nc -v localhost 1111
+      restartPolicy: Never
+      volumes:
+      - name: crac-image
+        persistentVolumeClaim:
+          claimName: crac-image
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-spring-boot
+  namespace: example
+  labels:
+    app: example-spring-boot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: example-spring-boot
+  template:
+    metadata:
+      labels:
+        app: example-spring-boot
+    spec:
+      containers:
+      - name: workload
+        image: example-spring-boot-k8s
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CRAC_FILES_DIR
+          value: /var/crac/image
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - mountPath: /var/crac
+          name: crac-image
+      volumes:
+      - name: crac-image
+        persistentVolumeClaim:
+          claimName: crac-image
+          readOnly: true
