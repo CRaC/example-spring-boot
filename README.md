@@ -135,3 +135,77 @@ export URL=$(gcloud run services describe example-spring-boot-direct --format 'v
 curl $URL
 Greetings from Spring Boot!
 ```
+
+## Preparing checkpoint and running in Kubernetes
+
+One way to run in Kubernetes is to perform the checkpoint locally or as part of Docker build, as we have done in the previous examples. Here we will show you how to do it end-to-end inside Kubernetes.
+
+Let's begin by starting a new Minikube cluster. We will create a new namespace `example` and use this for the demo:
+
+```bash
+minikube start
+eval $(minikube docker-env)
+kubectl create ns example
+kubectl config set-context --current --namespace=example
+```
+
+Now we can build an image using `Dockerfile.k8s`, based on `example-spring-boot-checkpoint` - that image hosts a built application. We will add the `netcat` utility and two scripts:
+* `checkpoint.sh` starts the application with `-XX:CRaCCheckpointTo=...` and `netcat` server listening on port 1111. When somebody connects to this port, the checkpoint via `jcmd` will be triggered.
+* `restore-or-start.sh` will check the presence of checkpoint image files and either restores from this image, or fallbacks to a regular application startup.
+
+```bash
+docker build -f Dockerfile.checkpoint -t example-spring-boot-checkpoint .
+docker build -f Dockerfile.k8s -t example-spring-boot-k8s .
+```
+
+Now we can apply resources from `k8s.yaml`: this hosts a PersistentVolumeClaim representing a storage (in Minikube this is bound automatically to a PersistentVolume), a Deployment that will create the application using the `restore-or-start.sh` script, and a Job that will create the checkpoint image. You can apply that now and observe that this has created two pods:
+
+```bash
+kubectl apply -f k8s.yaml
+kubectl get po
+```
+```
+NAME                                 READY   STATUS    RESTARTS   AGE
+create-checkpoint-fsfs4              2/2     Running   0          4s
+example-spring-boot-68b69cc8-bbxnx   1/1     Running   0          4s
+```
+
+When you explore application logs (`kubectl logs example-spring-boot-68b69cc8-bbxnx`) you will find that the application is started normally; the checkpoint image was not created yet. The other pod, though, hosts two containers: one running `checkpoint.sh` and the other warming the application up using `siege`, and then triggering the checkpoint through connection on port 1111 (this is not a built-in feature, remember that we use `netcat` in the background).
+
+After a while the job completes:
+
+```bash
+kubectl get job
+NAME                STATUS     COMPLETIONS   DURATION   AGE
+create-checkpoint   Complete   1/1           19s        44m
+```
+
+And now you can rollout a new deployment, this time restoring the application from the checkpoint image:
+
+```bash
+kubectl rollout restart deployment/example-spring-boot
+```
+
+After a short moment that application is back up:
+
+```
+NAME                                   READY   STATUS      RESTARTS   AGE
+create-checkpoint-fsfs4                0/2     Completed   0          95s
+example-spring-boot-79b98966db-ml2pj   1/1     Running     0          15s
+```
+
+In the logs you can see that it performed the restore:
+
+```
+2024-09-30T07:52:11.858Z  INFO 129 --- [Attach Listener] o.s.c.support.DefaultLifecycleProcessor  : Restarting Spring-managed lifecycle beans after JVM restore
+2024-09-30T07:52:11.866Z  INFO 129 --- [Attach Listener] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2024-09-30T07:52:11.868Z  INFO 129 --- [Attach Listener] o.s.c.support.DefaultLifecycleProcessor  : Spring-managed lifecycle restart completed (restored JVM running for 45 ms)
+```
+
+At last, let's verify that the application responds to our requests. You should get the "Greetings from Spring Boot!" reply:
+
+```bash
+kubectl expose deployment example-spring-boot --type=NodePort --port=8080
+URL=$(minikube service example-spring-boot -n example --url)
+curl $URL
+```

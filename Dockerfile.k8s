@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1.3-labs
+
+FROM example-spring-boot-checkpoint
+RUN apt-get update && apt-get install -y ncat
+ENV CRAC_FILES_DIR=/cr
+
+# This script is going to be used in the checkpointing job
+COPY <<'EOF' /checkpoint.sh
+#!/bin/sh
+
+mkdir -p $CRAC_FILES_DIR
+rm $CRAC_FILES_DIR/* || true
+
+# After receiving connection on port 1111 trigger the checkpoint (using numeric address to avoid IPv6 problems)
+(nc -v -l -p 1111 && jcmd example-spring-boot.jar JDK.checkpoint) &
+# we cannot exec java ... because the pod would be marked as failed when it exits
+# with exit code 137 after checkpoint
+java -XX:CRaCCheckpointTo=$CRAC_FILES_DIR -XX:CRaCMinPid=128 -jar /example-spring-boot.jar &
+PID=$!
+trap "kill $PID" SIGINT SIGTERM
+wait $PID || true
+EOF
+
+COPY <<'EOF' /restore-or-start.sh
+#!/bin/sh
+
+if [ -z "$(ls -A $CRAC_FILES_DIR 2> /dev/null)" ]; then
+  echo "No checkpoint found, starting the application normally..."
+  exec java -jar /example-spring-boot.jar
+else
+  echo "Checkpoint is present, restoring the application..."
+  exec java -XX:CRaCRestoreFrom=$CRAC_FILES_DIR
+fi
+EOF
+
+ENTRYPOINT [ "bash" ]
+CMD [ "/restore-or-start.sh" ]
