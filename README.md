@@ -45,6 +45,7 @@ $JAVA_HOME/bin/java -XX:CRaCRestoreFrom=cr
 ```
 docker build -f Dockerfile.checkpoint -t example-spring-boot-checkpoint .
 ```
+  > If you're on a Mac with Apple silicon (M1, M2, M3, etc), use `Dockerfile.checkpoint-aarch64` instead.
 
 2.  Start a (detached) container that will be checkpointed. Note that we're mounting `target/cr` into the container.
 ```
